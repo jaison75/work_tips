@@ -1,0 +1,28 @@
+A.  Create inline webpage with dynamic url
+
+1. Define Document property using script update
+  Edit -> Document Properties -> New -> then fill in dialog box -> selct property -> Script -> edit
+  paste the follwoing script with appropriate changes
+      from Spotfire.Dxp.Application.Collaboration import CollaborationPanel
+      from System import Uri
+
+      #Example from:
+      # https://www.extendanalytics.com/blog/change-collaboration-panel-url-automatically/
+
+      gsName= Document.Properties["GeneSetName"]
+      #need to go through all pannels to find out which one is the cp
+      for mypanel in Application.Document.ActivePageReference.Panels:
+          if type(mypanel)==CollaborationPanel:
+             mypanel.Visible=True
+             gsName = Document.Properties['GeneSetName']
+             mypanel.Url=Uri(gsName)
+             
+2. Register Data function
+  Register New function to bypass value, in R script set b <- a, 
+    define input (string, integer) and 
+    output (string, integer)
+    (http://spotfired.blogspot.com/2015/10/update-doc-property-trigger-ironpython.html)
+    Run
+    Choose input tab define, input handler, data table, expression marking
+    Choose output tab define, output handler, property name from step 1.
+    
