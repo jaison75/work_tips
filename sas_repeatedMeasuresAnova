@@ -1,0 +1,144 @@
+* SAS control file to perform repeated measures ANOVA
+
+* Define macro to fit glm model;
+%MACRO fit_glm(somamer=, model=, rep_val=);
+  ODS select none;
+
+  *RUN PROC GLM for selected somamer;
+  PROC GLM DATA = fromr;
+   where probeCore ="&somamer";
+    &model ;
+    REPEATED value &rep_val / PRINTE SUMMARY ;
+
+    %if &rep_val>2 %then
+    %do;
+      ODS output sphericity = s_&somamer;
+    %end;
+
+    ODS output multstat=mv_&somamer;
+    ODS output modelanova=mod_&somamer;
+  RUN ;
+
+  ODS output close;
+
+  * Extract rows and add annotation;
+    %if &rep_val>2 %then
+    %do;
+      DATA s_&somamer;
+        length variable $50;
+        SET s_&somamer;
+        IF source="Orthogonal Components";
+        variable="&somamer";
+      RUN;
+    %end;
+
+  * Extract rows and add annotation;
+  DATA mv_&somamer;
+    length variable $50;
+    SET mv_&somamer;
+    IF statistic="Wilks' Lambda";
+    variable="&somamer";
+  RUN;
+
+  * Extract rows and add annotation;
+  DATA mod_&somamer;
+    length variable $50;
+    SET mod_&somamer;
+    IF dependent in("WithinSubject") and Source not in("Error(value)");
+    variable="&somamer";
+  RUN;
+
+  * Append local data to master data;
+  %if &rep_val>2 %then %do;
+    PROC APPEND BASE=all_sphericity DATA=s_&somamer;
+  %end;
+
+  PROC APPEND BASE=all_multstat   DATA=mv_&somamer;
+  PROC APPEND BASE=all_modelanova DATA=mod_&somamer;
+  RUN;
+
+%MEND pmi;
+*======================================================================================;
+
+* Define macro to format, export and purge fit stats;
+%MACRO export_n_purge( prefix=, rep_val=,);
+
+  *Format p-values ;
+  %if &rep_val>2 %then %do;
+    DATA all_sphericity;
+      SET all_sphericity;
+      FORMAT ProbChiSq e12.;
+    RUN;
+  %end;
+
+  DATA all_multstat;
+    SET all_multstat;
+    FORMAT ProbF e12.;
+  RUN;
+
+  DATA all_modelanova;
+    SET all_modelanova;
+    FORMAT ProbFGG  e12.;
+    FORMAT ProbFHF e12.;
+    FORMAT ProbF  e12.;
+  RUN;
+  *------------------------------------;
+
+  * Export files ;
+  %if &rep_val>2 %then %do;
+    PROC EXPORT DATA=all_sphericity outfile="../output/sphericity_&prefix..csv" dbms=CSV replace; RUN;
+  %end;
+
+  PROC EXPORT DATA=all_multstat   outfile="../output/multstat_&prefix..csv" dbms=CSV replace; RUN;
+  PROC EXPORT DATA=all_modelanova outfile="../output/modelanova_&prefix..csv" dbms=CSV replace; RUN;
+
+  *------------------------------------;
+
+  * Purge stats files for next iteration;
+  PROC DELETE DATA=all_sphericity;RUN;
+  PROC DELETE DATA=all_multstat;RUN;
+  PROC DELETE DATA=all_modelanova;RUN;
+  *------------------------------------;
+
+%MEND export_n_purge;
+*======================================================================================;
+
+*Macro to prepare data;
+%MACRO prep_data(infile=);
+
+  PROC DELETE DATA=fromr; RUN;
+  PROC DELETE DATA=somamers; RUN;
+
+  PROC IMPORT datafile="&infile" out=fromr dbms=dbf;
+  RUN;
+
+  DATA somamers;
+   SET fromr;
+   keep probeCore;
+  RUN;
+
+  PROC SORT DATA=somamers noduprecs;
+   by _all_;
+  RUN;
+%MEND;
+*======================================================================================;
+
+*MAIN;
+
+**----Validation cohort;
+%LET pfx = bioRep;
+%LET soma_in = /da/dmp/cb/restricted_data/heart_mgh/new/jj27_082817_biol_replicates/output/mgh7.dbf;
+%LET MDL =  MODEL time0 time1= ;
+%LET repVal = 2;
+
+%prep_data(infile=&soma_in);
+
+DATA _null_;
+ SET somamers (obs=5);
+ call execute('%fit_glm(somamer='||strip(probeCore)||', model=&MDL, rep_val=&repVal);');
+RUN;
+
+%export_n_purge(prefix=&pfx, rep_val=&repVal);
+
+**-- Define pfx, soma_in, MDL and repVal in LET stmts above and repeat to do multiple data sets
+* remove obs=5 option to loop through all somamers
