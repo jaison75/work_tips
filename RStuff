@@ -66,3 +66,25 @@ plot_clin <- function(d.f, x_var, y_var, colVar, grpVar,
   new_plot <- gtable_stack(g1, new_strips)
   return(new_plot)
 }
+
+# How I installed magick.
+## First install ImageMagick (local install on unix server)
+ cd installs/
+ wget https://www.imagemagick.org/download/ImageMagick-6.9.9-20.tar.gz
+ tar -xzvf ImageMagick-6.9.9-20.tar.gz
+ cd ImageMagick-6.9.9-20/
+ ./config --prefix=/home/jacobja9/ImageMagick-6.9.9-20
+ make
+ make install
+## Added following lines to .bashrc
+ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/jacobja9/ImageMagick-6.9.9-20/lib
+ export PATH="/home/jacobja9/ImageMagick-6.9.9-20/bin:$PATH"
+ export PKG_CONFIG_PATH="/home/jacobja9/ImageMagick-6.9.9-20/lib/pkgconfig:$PGK_CONFIG_PATH"
+## in R
+ devtools::install_github("ropensci/magick",force=TRUE)
+
+
+
+ 
+ 
+
