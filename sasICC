@@ -1,0 +1,44 @@
+%LET soma_in = /da/dmp/cb/restricted_data/heart_mgh/new/jj27_082817_biol_replicates/output/mgh7_icc_in.dbf;
+
+PROC IMPORT datafile="&soma_in" out=fromr dbms=dbf;
+RUN;
+
+PROC EXPORT DATA=fromr outfile="/da/dmp/cb/restricted_data/heart_mgh/new/jj27_082817_biol_replicates/output/icc_in.txt" dbms=CSV replace; RUN;
+
+
+proc sort data=fromr; by probeCore; run;
+ods output CovParms = covp;
+proc mixed data = fromr;
+   by probeCore;
+   class MGH_pt_ID time;
+   model rfu = time;
+   random intercept /subject=MGH_pt_ID;
+run;
+ods output close;
+
+
+data icc;
+  set covp;
+  retain bvar;
+  if subject~="" then bvar = estimate;
+  icc = bvar/(bvar+estimate);
+run;
+
+data icc2;
+  set icc;
+  where CovParm = 'Residual';
+run;
+
+PROC EXPORT DATA=icc2 outfile="/da/dmp/cb/restricted_data/heart_mgh/new/jj27_082817_biol_replicates/output/icc_results_1.txt" dbms=CSV replace; RUN;
+
+
+# d.f has a stacked data format and look like the table below:
+# probeCore MGH.pt.ID  time       rfu
+# anti_10000_28       P_1 time0  9.999718
+# anti_10000_28       P_1 time1 10.055689
+# anti_10000_28      P_10 time0 10.303210
+# anti_10000_28      P_10 time1 10.129541
+# anti_10000_28      P_11 time0 10.328563
+# anti_10000_28      P_11 time1 10.289673
+
+#
