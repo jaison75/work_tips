@@ -83,6 +83,12 @@ plot_clin <- function(d.f, x_var, y_var, colVar, grpVar,
 ## in R
  devtools::install_github("ropensci/magick",force=TRUE)
 
+# odds ratio from glm
+if you want to interpret the estimated effects as relative odds ratios, just do exp(coef(x)) (gives you eβeβ, the multiplicative change in the odds ratio for y=1y=1 if the covariate associated with ββ increases by 1). For profile likelihood intervals for this quantity, you can do
+require(MASS)
+x = glm(Outcome ~ Age, family=binomial(link="logit"))
+exp(cbind(coef(x), confint(x)))  
+https://stats.stackexchange.com/questions/8661/logistic-regression-in-r-odds-ratio
 
 
  
