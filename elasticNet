@@ -1,0 +1,132 @@
+library(gridExtra)
+library(testthat)
+library(doParallel)
+library(caret)
+library(glmnet)
+library(tidyverse)
+library(GSVA)
+library(testthat)
+library(magrittr)
+
+annot<- somaAnnot()
+
+cantos.dir <- "/da/dmp/cb/restricted_data/cantos"
+setwd(cantos.dir)
+
+dmp029.dir  <- "/db/dmp/jacobja9/soma/WS2/Novartis.DMP029.BioRecYoungvsOld.HumanSerum.CDimitri.18September2015/"
+
+dmp029.soma <- file.path( dmp029.dir, "somaSet.RData") %>% loadRData()
+
+dmp029.md   <- file.path( dmp029.dir, "DMP029_BioRec_Young_vs_Old_Human_Serum_CDimitri_20150914_vf_cd.txt") %>%
+  read.delim %>%
+  select( PatientID = Sample.Patient.Identifier,
+          SMF_ID = SMF.ID..or.STS2.Identifer,
+          Gender, Age) %>%
+  filter( grepl("BRH", PatientID)) %>%
+  left_join( dmp029.soma$ameta_sample %>% select( Barcode, PatientID=SampleDescription, FileName))%>% 
+  filter( Barcode != "X107171") # remove PCA outliers
+
+dmp029.scaled <- dmp029.soma$HybMedNormCal[ ,dmp029.md$Barcode] %>% 
+  set_colnames( dmp029.md$SMF_ID) %>%
+  set_rownames( harmonize_somamer_id( row.names(.))) %>%
+  rownames_to_column( "somamerID") %>%
+  gather( SampleID, value, -1) %>%
+  group_by( SampleID) %>%
+  mutate( scaled = scale(value))
+
+if (0) {
+  pca <- prcomp( t(dmp029.soma$HybMedNormCal[ ,dmp029.md$Barcode]))
+  pca_covar_assoc( pca, factor(dmp029.md$Gender))$plot
+  
+  f1 <- ggplot(dmp029.scaled, aes( x=value,  group = SampleID)) + geom_density()
+  f2 <- ggplot(dmp029.scaled, aes( x=scaled, group = SampleID)) + geom_density()
+  
+  grid.arrange(f1,f2)
+}
+
+e.m <- dmp029.scaled %>%
+  filter(somamerID %in% annot$signal.somamers) %>%
+  select(-value) %>% 
+  spread(SampleID, scaled ) %>%
+  as.data.frame %>%
+  set_rownames( .$somamerID) %>%
+  select( -somamerID) %>% t %>%
+  as.matrix
+  
+#x.d <- cbind(Gender=factor(dmp029.md$Gender), e.m)
+
+timestamp <- format(Sys.time(), "%Y_%m_%d_%H_%M")
+model <- "glmnet"
+
+trainX <- e.m
+trainY <- factor( dmp029.md$Gender)
+
+# 3 repeats of 10 fold cv
+cctrl4 <- trainControl(method = "repeatedcv", number = 10, repeats = 5,
+                       classProbs = TRUE)
+
+# define tuning grid (100 alphas and 100 lambdas)
+logspace <- function( d1, d2, n) exp(log(10)*seq(d1, d2, length.out=n))
+glmnet.grid <- expand.grid( .alpha = seq(0.001, 1, length.out = 100),
+                            .lambda = logspace(1,-5, 1200))
+
+# For testing
+#glmnet.grid <- expand.grid( .alpha = seq(0.001, 1, length.out = 5),
+#                            .lambda = logspace(1,-5, 12))
+
+# total models = repeats * k-fold * nAlpha * nLambda = 3000000 models
+# total models = 3       * 10     * 100    * 1000    = 3000000 models
+
+registerDoParallel(cores=28)
+set.seed(849)
+p_time1 <- system.time(
+  model_pp <- train(trainX, trainY,
+                    family = "binomial",
+                    method = "glmnet",
+                    trControl = cctrl4,
+                    preProc = c("center", "scale"),
+                    tuneGrid = glmnet.grid)
+)
+
+save( model_pp, file = "refData/genderModel.RData")
+
+genderModel <- loadRData("refData/genderModel.RData")
+
+cantos.soma <- file.path( cantos.dir, "sourceData/somaSet.RData") %>%
+  loadRData()
+
+
+cantos.md  <- file.path( cantos.dir, "sourceData/cantos.RData") %>%
+  loadRData() %>%
+  select(SMF_ID = SMF_ID_or_STS2_Identifier, SEX) %>%
+  mutate( sex = factor(ifelse( SEX == "M",
+                               "Male", 
+                               ifelse( SEX == "F",
+                                       "Female",
+                                       "UNK")))) %>%
+  left_join( cantos.soma$ameta_sample %>%
+               select( SMF_ID = SMF_ID_or_STS2_Identifier,
+                       Subject_ID,
+                       Barcode))
+
+cantos.scaled <- cantos.soma$HybNormPlateScaleMedNormCal[ ,cantos.md$Barcode] %>% 
+  set_colnames(cantos.md$SMF_ID) %>%
+  set_rownames( harmonize_somamer_id( row.names(.))) %>%
+  rownames_to_column( "somamerID") %>% 
+  gather( SampleID, value, -1) %>%
+  group_by( SampleID) %>% 
+  mutate( scaled = scale(value))
+
+cantos.em <-cantos.scaled %>%
+  filter(somamerID %in% annot$signal.somamers) %>%
+  select(-value) %>% 
+  spread(SampleID, scaled ) %>%
+  as.data.frame %>%
+  set_rownames( .$somamerID) %>%
+  select( -somamerID) %>% t %>%
+  as.matrix
+
+cantos.pred <- predict( genderModel, cantos.em)
+cantos.ref <- cantos.md$sex
+
+confusionMatrix( cantos.pred, cantos.ref)
