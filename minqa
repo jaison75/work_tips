@@ -1,0 +1,1 @@
+install.packages("minqa") ran into errors.  Blew out .Rprofile, started R and installed minqa.  Some flaf in Rprofile interferes with compiler option.
