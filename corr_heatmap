@@ -1,0 +1,51 @@
+#' Correlation Structure Heatmap
+#'
+#' This function creates a correlation structure heatmap given a data frame
+#' @author Rebecca Torene
+#' @param df data frame or matrix with samples as rows and variables as columns
+#' @param title character object to be included in plot title, default title="Correlation Structure"
+#' @param write T/F whether to write correlation matrix to file, default write=F
+#' @param cutoff numeric value between 0 and 1 used to color heatmap, default cutoff=0
+#' @return no object is returned, plots are printed, tables are written
+#' @details Plots the pairwise correlation between variables in a data frame. Option to also write the pairwise correlation matrix to a table. If a number between 0 and 1 is pro
+vided for the "cutoff" parameter, all absolute pairwise correlations below that threshold will appear white in the heatmap.
+#' @keywords correlation, matrix, heatmap
+#' @note requires libraries:  ggplot2 and reshape2
+#' @export
+#' @examples
+#'  df = data.frame(matrix(rnorm(1000), nrow=100))
+#'  correlation_heatmap(df, title="My data")
+#'  correlation_heatmap(df, title="My data", cutoff= 0.1)
+
+
+correlation_heatmap = function(df, title="Correlation Structure", write=F, cutoff=0){
+#   library(colorRamp)
+  library(ggplot2)
+  library(reshape2)
+
+  if(!is.numeric(cutoff) | cutoff > 1 | cutoff < 0){
+    cutoff = 0
+    warning("Provided cutoff outside the range 0-1. A cutoff of 0 will be used.")
+  }
+
+  # set color scale
+  blues <- colorRampPalette(c('dark blue', 'white', "darkred"))
+  sc <- scale_fill_gradientn(colours = blues(100), limits=c(-1,1))
+
+  # determine correlation structure of data
+  cor.bm <- cor(df, use="pairwise.complete.obs")
+
+  # if user wants correlation matrix to be written to file
+  if(write){
+    write.table(cor.bm, paste(title, ".txt", sep=""), sep = "\t", col.names = T, row.names = T, quote = F)
+  }
+
+  # Only give color to values above cutoff
+  cor.bm[abs(cor.bm) < cutoff] <- 0
+
+  # create plot
+  p = qplot(x=Var1, y=Var2, data=melt(cor.bm), fill=value, geom="tile")
+  print (p + theme(axis.text.x = element_text(angle = 90, hjust = 1, size=14), axis.text.y = element_text(size=14))+
+           sc +
+           ggtitle(paste(title, "( Abs Pearson Correlation Above", cutoff, ")")) )
+}
