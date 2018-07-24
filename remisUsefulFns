@@ -1,0 +1,135 @@
+
+################################################################################
+###                                                                          ###
+###   TITLE    Useful R functions                                            ###
+###   AUTHOR   Rémi Kazma                                                    ###
+###   DATE     11-NOV-2015                                                   ###
+###   VERSION  1                                                             ###
+###   NOTES    List of functions that I commonly use in R scripts            ###
+###            Gathered from multiple sources (mostly internet)              ###
+###            Specific Acknowledgments: Nial Cardin,                        ###
+###                                                                          ###
+################################################################################
+
+
+# pastePrefix adds a prefix (argument "prefix=") to the beginning of x
+# pasteSuffix adds a suffix (argument "prefix=") to the end of x
+# pasteExtfix is a generic that can add both at the same time
+# Often combined with apply ...
+pastePrefix  =  function (prefix = "", x) { paste(prefix, x, sep = "") }
+pasteSuffix  =  function (suffix = "", x) { paste(x, suffix, sep = "") }
+pasteExtfix  =  function (prefix = "", suffix="", x) { paste(prefix, x, suffix, sep = "")}
+
+
+#   Quantile-Quantile plot with 95% shaded confidence interval area
+#   Created: 02-FEB-2012
+#   Updated: 27-OCT-2015
+qqPlotCI = function(obsVector = NA, confLevel = 0.95, repeats = 1e3, mainTitle = "Q-Q plot",
+                    fillCol = "lightblue",  diagCol = "white", pointCol = "darkblue",
+                    byFactor = NA, byCol = NA,   PNG = FALSE, fileName = NA)
+{
+   if (!is.vector(obsVector) | sum(is.na(obsVector))) { cat("Error: Provide a vector of Pvalues\n") }
+
+   if(!sum(is.na(byFactor))) { cat ("Plotting p-values by colors\n") }
+   if(!sum(is.na(byFactor)) & sum(is.na(byCol)))
+     { cat ("No color specified for factor, \"rainbow()\" will be used\n")
+       if(is.factor(byFactor) == FALSE)
+         { cat ("Factor is not recognized as a \"factor\". \"as.factor()\" will be applied\n")
+           byFactor = as.factor(byFactor)
+         }
+       byColCount = length(levels(byFactor))
+     }
+
+   if(!sum(is.na(byFactor)) & !sum(is.na(byCol)))
+     { if(length(levels(byFactor)) != length(byCol))
+         { cat ("length of byCol does not match the number of levels in byFactor, \"rainbow()\" will be used\n")
+           byColCount = length(levels(byFactor))
+           byCol = rainbow(n=byColCount)
+         }
+     }
+
+   if (length(obsVector)<10) {
+   cat("Error: Length of vector is < 10. \n", "       The q-q plot won't be pretty! \n", sep = "")
+   } else {
+   nullVals    = which(obsVector == 0)
+   obsVector[nullVals] = min(obsVector[which(obsVector != 0)])
+   obsLog10    = sort(-log10(obsVector))
+   theoMatrix  = t(replicate(repeats, runif(length(obsVector), min=0, max=1)))
+   theoMatrix  = t(apply(theoMatrix, 1, sort))
+   theoVector  = colMeans(theoMatrix)
+   theoLog10   = sort(-log10(theoVector))
+   theoBounds  = apply(theoMatrix, 2, quantile, probs=c((1-confLevel)/2, (1+confLevel)/2))
+   lowerBounds = sort(-log10(theoBounds["97.5%",]))
+   upperBounds = sort(-log10(theoBounds["2.5%",]))
+   xlimmax     = max(theoLog10) + 0.1
+   ylimmax     = max(obsLog10, upperBounds) + 0.1
+
+   lambdaGC = median(qchisq(1-obsVector,1))/qchisq(0.5,1)
+
+   if (PNG == TRUE) { png(filename = fileName, width = 500, height = 500) }
+   plot(obsLog10 ~ theoLog10, type = "n",
+        ylim = c(0, ylimmax),  xlim = c(0, xlimmax), axes = FALSE,
+        ylab = "Observed -log10(P-values)",
+        xlab = "Theoretical -log10(P-values) under H0",
+        main = mainTitle)
+   axis(1, at = seq(0, xlimmax, 0.5), labels = NULL,
+        lty = 1, lwd = 2, col = "black", las = 0, tck = -0.01)
+   axis(2, at = seq(0, ylimmax, 0.5), labels = NULL,
+        lty = 1, lwd = 2, col = "black", las = 2, tck = -0.01)
+   polygon(x = c(min(theoLog10), theoLog10,   max(theoLog10)),
+           y = c(min(theoLog10), upperBounds, max(theoLog10)),
+           col = fillCol, border = NA)
+   polygon(x = c(min(theoLog10), theoLog10,   max(theoLog10)),
+           y = c(min(theoLog10), lowerBounds, max(theoLog10)),
+           col = fillCol, border = NA)
+   lines(c(0, max(theoLog10)), c(0, max(theoLog10)), col = diagCol, lwd = 1)
+   if(!sum(is.na(byFactor)))
+     { for (flab in 1:length(levels(byFactor)))
+           { points(head(obsLog10[which(byFactor == levels(byFactor)[flab])], length(obsLog10)-length(nullVals)) ~ head(theoLog10[which(byFactor == levels(byFactor)[flab])], len
+gth(obsLog10)-length(nullVals)),
+                    type = "p", pch = 1, cex = 0.5, col = byCol[flab])
+           }
+
+     } else {
+            points(head(obsLog10, length(obsLog10)-length(nullVals)) ~ head(theoLog10, length(obsLog10)-length(nullVals)),
+                   type = "p", pch = 1, cex = 0.5, col = pointCol)
+            points(tail(obsLog10, length(nullVals)) ~ tail(theoLog10, length(nullVals)),
+                   type = "p", pch = 13, cex = 1, col = "red")
+            }
+   text(x = 0.5, y = ylimmax - 0.5, labels = bquote(lambda[GC] ~ "=" ~ .(lambdaGC)))
+   if(!is.na(byFactor)) { legend("right", levels(byFactor), col = byCol, pch = 1, bg = "gray90") }
+
+   if (PNG == TRUE) { dev.off() }
+   }
+}
+
+# function that outputs a list of names of a vector of p-values that are below (or above) a threshold
+pThresh = function(x, alpha = 0.05, side = "below")
+                  { if(side == "below") listing = names(which(x < alpha))
+                    if(side == "above") listing = names(which(x > alpha))
+                    return(listing)
+                  }
+
+# function that reads a vector of p-values and outputs a vector of same length with 1/0 for values below/above a threshold
+iThresh = function(x, alpha = 0.05, side = "below")
+                  { if(side == "below") {indicator = rep(0, length(x)); indicator[which(x < alpha)] = 1}
+                    if(side == "above") {indicator = rep(0, length(x)); indicator[which(x > alpha)] = 1}
+                    return(indicator)
+                  }
+
+# function that counts the number of decimal places / Note that numeric needs to be as.character
+decimalCount<-function(x)
+                      { stopifnot(class(x)=="character")
+                        x<-gsub("(.*)(\\.)|([0]*$)","",x)
+                        nchar(x)
+                      }
+
+# function that rounds p-values selectively as scientific or not (depending on threshold)
+pValFormat = function(pval, sciThresh = 0.001, digits = 3)
+                     { if(pval >  sciThresh) {format(pval, scientific = FALSE, digits = decimalCount(as.character(sciThresh))-1)}
+                       else {format(pval, scientific = TRUE, digits = digits)}
+                     }
+
+
+
+
