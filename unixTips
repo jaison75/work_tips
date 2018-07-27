@@ -2,3 +2,5 @@ screen:
 
 https://www.mattcutts.com/blog/a-quick-tutorial-on-screen/
 
+find and grep and include filename in output
+find ./ -name "*.R" -exec grep -H 'boxCox' {} \;
