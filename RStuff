@@ -90,6 +90,10 @@ x = glm(Outcome ~ Age, family=binomial(link="logit"))
 exp(cbind(coef(x), confint(x)))  
 https://stats.stackexchange.com/questions/8661/logistic-regression-in-r-odds-ratio
 
+# When install.packages runs into Rcpp lock errors
+/home/jacobja9/R/x86_64-pc-linux-gnu-library/3.4/00LOCK-Rcpp
+https://stackoverflow.com/questions/14382209/r-install-packages-returns-failed-to-create-lock-directory
+
 
  
  
