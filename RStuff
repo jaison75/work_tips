@@ -94,6 +94,8 @@ https://stats.stackexchange.com/questions/8661/logistic-regression-in-r-odds-rat
 /home/jacobja9/R/x86_64-pc-linux-gnu-library/3.4/00LOCK-Rcpp
 https://stackoverflow.com/questions/14382209/r-install-packages-returns-failed-to-create-lock-directory
 
+# conf int from fit 95% ci = 2.5 to 97.5
+exp(parameter estimate  + se of parameter estimate*c(-1,0,1)*qt(0.975, df) )
 
  
  
