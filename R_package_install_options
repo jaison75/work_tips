@@ -1,0 +1,6 @@
+devtools::install_github('thomasp85/gganimate', INSTALL_opts = c('--no-lock'))
+
+
+install.packages(
+  c("ncdf4"),
+  configure.args = c(cndf4 = "--with-netcdf-include=/usr/prog/netcdf/4.5.0-goolf-1.5.14-NX/bin/nc-config"))
