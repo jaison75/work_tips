@@ -12,3 +12,5 @@ nrusca-ldl30079:/da/CVM/jacobja9/AAB584$ sed -n '20900{p;q}' PARADIGM_WES/varian
 #to print range of lines in large file
 rogue:/da/CVM/jacobja9/AAB584/PARADIGM_WES$ sed -n '2,20p;21q' sample_1.txt
 
+#print nonduplicate lines
+awk '!seen[$0]++' infile
