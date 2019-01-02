@@ -97,6 +97,9 @@ https://stackoverflow.com/questions/14382209/r-install-packages-returns-failed-t
 # conf int from fit 95% ci = 2.5 to 97.5
 exp(parameter estimate  + se of parameter estimate*c(-1,0,1)*qt(0.975, df) )
 
- 
+# What if you want to return summaries that are not just a single number?
+https://github.com/jennybc/row-oriented-workflows/blob/master/ex07_group-by-summarise.md
+
+
  
 
