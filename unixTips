@@ -14,3 +14,6 @@ rogue:/da/CVM/jacobja9/AAB584/PARADIGM_WES$ sed -n '2,20p;21q' sample_1.txt
 
 #print nonduplicate lines
 awk '!seen[$0]++' infile
+
+# check multicore processor usage
+mpstat -P ALL 5 5
