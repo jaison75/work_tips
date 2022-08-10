@@ -1,5 +1,6 @@
-pip freeze  > requirements.txt
-conda activate base # the py3.9 conda forge environment has virtualenv
-virtualenv --python=python3.6 py3_6
-source py3_6/bin/activate
-pip install -r requirements.txt
+pip freeze  > requirements.txt 		# from an environment it is working yours or colleagues
+conda activate base 			# the py3.9 conda forge environment has virtualenv
+virtualenv --python=python3.6 py3_6	# create virtual env
+conda deactivate
+source py3_6/bin/activate 		# activate the env
+pip install -r requirements.txt 	# pip install requirements
