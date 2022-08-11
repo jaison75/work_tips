@@ -9,7 +9,13 @@ https://s3.amazonaws.com/assets.datacamp.com/img/blog/data+table+cheat+sheet.pdf
 http://brooksandrew.github.io/simpleblog/articles/advanced-data-table/
 
 
-
+#Banded background for categorical axes
+rects <- data.frame(xstart = seq(0.5,9.5,1), xend = seq(1.5,10.5,1), 
+         col = letters[1:10])
+ggplot() + geom_point(data=top.votes.by.director.country, 
+                      aes(x=country, y=director.rank)) +
+           geom_rect(data=rects, aes(ymin=0, ymax=80, xmin=xstart,
+                      xmax=xend, fill=col), alpha =0.5) + coord_flip()
 
 # color facets by pheno
 plot_clin <- function(d.f, x_var, y_var, colVar, grpVar,
