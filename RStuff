@@ -16,6 +16,21 @@ ggplot() + geom_point(data=top.votes.by.director.country,
                       aes(x=country, y=director.rank)) +
            geom_rect(data=rects, aes(ymin=0, ymax=80, xmin=xstart,
                       xmax=xend, fill=col), alpha =0.5) + coord_flip()
+                      
+                      
+ # banding with with ggforestplot                     
+ g +
+  # Add custom theme
+  theme_forest() +
+  # Add striped background
+  geom_stripes(odd = "#33333333", even = "#00000000") +
+  # Add vertical line at null point
+  geom_vline(
+    xintercept = 0,
+    linetype = "solid",
+    size = 0.4,
+    colour = "black"
+  )
 
 # color facets by pheno
 plot_clin <- function(d.f, x_var, y_var, colVar, grpVar,
