@@ -1,0 +1,47 @@
+Snowflake Driver installation on M2
+https://stackoverflow.com/questions/69275130/how-do-i-install-the-odbc-driver-for-snowflake-successfully-on-an-m1-apple-silic
+
+Had to resort to x86_64 architecture
+softwareupdate --install-rosetta
+arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+
+arch -x86_64 /usr/local/Homebrew/bin/brew install unixodbc
+arch -x86_64 /usr/local/Homebrew/bin/brew install --cask rstudio
+arch -x86_64 /usr/local/Homebrew/bin/brew install --cask r
+
+We then need to install the snowflake driver: https://sfc-repo.snowflakecomputing.com/odbc/mac64/latest/index.html
+
+Click through all the install prompts.
+
+Modify your files
+
+/usr/local/etc/odbcinst.ini:
+
+[Snowflake Driver]
+Driver          = /opt/snowflake/snowflakeodbc/lib/universal/libSnowflake.dylib
+/usr/local/etc/odbc.ini
+
+[Snowflake]
+Driver             = Snowflake Driver
+uid                = <uid>
+server             = <server>
+role               = <role>
+warehouse          = <warehouse>
+authenticator      = externalbrowser
+We also need to modify the simba.snowflake.ini file.
+
+It is somewhat locked down so run:
+
+sudo chmod 646 /opt/snowflake/snowflakeodbc/lib/universal/simba.snowflake.ini
+Then
+
+vim /opt/snowflake/snowflakeodbc/lib/universal/simba.snowflake.ini
+And find the ODBCInstLib line that is uncommented and change it to:
+
+ODBCInstLib=/usr/local/Cellar/unixodbc/2.3.9_1/lib/libodbcinst.dylib
+After setting this up I was able to use this connection successfully:
+
+install.packages("DBI")
+install.packages("odbc")
+con <- DBI::dbConnect(odbc::odbc(), "Snowflake")
+
