@@ -17,3 +17,6 @@ awk '!seen[$0]++' infile
 
 # check multicore processor usage
 mpstat -P ALL 5 5
+
+# automating screencapture cropping on a Mac
+for f in Sc*png; do sips -c 1435 2560 --cropOffset 355 0 $f; done
